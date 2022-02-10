@@ -159,14 +159,22 @@ public class CustomerController {
 			
 			if (passwordChange.getNewPassword().equals(passwordChange.getConfirmPassword())) {
 				
-				if (passwordEncoder.matches(passwordChange.getConfirmPassword(), fetchedEmail.getPassword()) == true) {
-					CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "New Password Should be different from old Password","400");
-					return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
+				if (passwordEncoder.matches(passwordChange.getOldPassword(), fetchedEmail.getPassword()) == true ) {
+					
+					if (passwordChange.getOldPassword().equals(passwordChange.getConfirmPassword())) {
+						CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "New Password Should be different from old Password","400");
+						return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
+					} else {
+						customerService.updatePassword(passwordChange.getConfirmPassword(), passwordChange.getEmailId());
+						CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Password Updated Successfully","200");
+						return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+					}
+					
 				}else {
 					
 					customerService.updatePassword(passwordChange.getConfirmPassword(), passwordChange.getEmailId());
-					CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Password Updated Successfully","200");
-					return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+					CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Password Does not matches","400");
+					return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 				}
 				
 			}else {
