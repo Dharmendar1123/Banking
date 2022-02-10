@@ -1,17 +1,19 @@
 package com.banking.demo.controller;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.banking.demo.customRequest.CustomRequestForMoneyTransfer;
+import com.banking.demo.customerResponse.CustomResponseForPassbook;
 import com.banking.demo.customerResponse.CustomerResponseForNoUser;
 import com.banking.demo.entities.AccountDetails;
 import com.banking.demo.entities.CustomerEntity;
@@ -21,7 +23,7 @@ import com.banking.demo.service.CustomerService;
 import com.banking.demo.util.Validations;
 
 @RestController
-@CrossOrigin
+//@CrossOrigin
 @RequestMapping("/customer/transaction")
 public class TransactionController {
 	
@@ -53,7 +55,7 @@ public class TransactionController {
 			
 		}else {
 			CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Invalid Account Number", "409");
-			return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+			return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 		}
 	}
 		
@@ -73,7 +75,7 @@ public class TransactionController {
 							if(fetchedAcc.getTransPin().equals(moneyTransfer.getTransactionPin())) {
 								if (moneyTransfer.getAccountNumber().equals(moneyTransfer.getUserAccountNumber())) {
 									CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Sender and Receiver account can't be same", "409");
-									return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+									return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 								} else {
 									long senderBalance = fetchAccount.getAccountBalance() - moneyTransfer.getAmount();
 									String updatedDate = ""+new Date();
@@ -108,23 +110,51 @@ public class TransactionController {
 								
 							}else {
 								CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Invalid Transaction Pin", "409");
-								return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+								return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 							}
 						}else {
 							CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Invalid IFSC Code", "409");
-							return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+							return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 						}
 					}else {
 						CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Invalid Branch Name", "409");
-						return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+						return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 					}
 				}else {
 					CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Enter a valid amount or You don't have enough amount", "409");
-					return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+					return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 				}	
 			}else {
 				CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "User Does Not Exist", "409");
+				return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
+			}
+			
+		}
+		
+		@PostMapping("/viewPassbook")
+		public ResponseEntity<Object> viewPassbook(@RequestBody AccountDetails accountDetails) {
+			List<List<String>> data = new ArrayList<List<String>>();
+			AccountDetails fetchAccount =  accountService.fetchAccountDetails(accountDetails.getAccountNumber());
+			if (fetchAccount != null) {
+				List<MoneyTransfer> fetchTransAcc = accountService.fetchTransAccount(accountDetails.getAccountNumber());
+				System.out.println(fetchTransAcc);
+				
+				for (int i=0;i<fetchTransAcc.size();i++)
+				{
+					List<String> tempdata = new ArrayList<String>();
+					tempdata.add(fetchTransAcc.get(i).getAccountNumber());
+					tempdata.add(fetchTransAcc.get(i).getUserAccountNumber());
+					tempdata.add(fetchTransAcc.get(i).getAmount()+"");
+					tempdata.add(fetchTransAcc.get(i).getCreatedAt());
+					tempdata.add(fetchTransAcc.get(i).getTransactionStatus());
+					data.add(tempdata);
+				}
+				CustomResponseForPassbook loginResponse = new CustomResponseForPassbook(data);
+				
 				return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+			} else {
+				CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "User Does Not Exist", "409");
+				return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 			}
 			
 		}

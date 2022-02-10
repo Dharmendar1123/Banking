@@ -21,9 +21,8 @@ public interface CustomerService {
 			long customerId);
 
 	CustomerEntity findUserById(long customerId);
-
+	
 	int updatePassword(String confirmPassword, String emailId);
-
 
 
 }

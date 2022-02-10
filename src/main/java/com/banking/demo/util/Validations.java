@@ -88,6 +88,10 @@ public class Validations {
 			throw new InvalidRequestException("Email Id should not be Empty");
 		}
 		
+		if (passwordChange.getOldPassword().equals("")) {
+			throw new InvalidRequestException("Old Password should not be Empty");
+		}
+		
 		if (passwordChange.getNewPassword().equals("")) {
 			throw new InvalidRequestException("New Password should not be Empty");
 		}

@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,19 +15,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.banking.demo.customRequest.OtpRequest;
 import com.banking.demo.customRequest.PasswordChange;
+import com.banking.demo.customRequest.VerifyOtp;
 import com.banking.demo.customerResponse.CustomResponseForAccountDetails;
 import com.banking.demo.customerResponse.CustomerResponseForNoUser;
 import com.banking.demo.customerResponse.CustomerResponseForRegistration;
 import com.banking.demo.entities.AccountDetails;
 import com.banking.demo.entities.CustomerEntity;
+import com.banking.demo.entities.OtpDetails;
 import com.banking.demo.service.AccountService;
 import com.banking.demo.service.CustomerService;
+import com.banking.demo.service.OtpDetailsService;
 import com.banking.demo.serviceImpl.MailService;
 import com.banking.demo.util.AccountNumberGenerator;
 import com.banking.demo.util.Validations;
 
 @RestController
-@CrossOrigin
+//@CrossOrigin
 @RequestMapping("/customer/auth")
 public class CustomerController {
 	
@@ -49,6 +51,9 @@ public class CustomerController {
 	
 	@Autowired
 	AccountNumberGenerator accountNumberGenerator;
+	
+	@Autowired
+	OtpDetailsService otpDetailsService;
 	
 
 	@PostMapping("/registerCustomer")
@@ -77,7 +82,7 @@ public class CustomerController {
 			
 		}else {
 			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Customer Already Exist", "409");
-			return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+			return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 		}
 		
 	}
@@ -95,10 +100,10 @@ public class CustomerController {
 		
 		if(fetchedEmail == null) {
 			CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Invalid Email or User doesn't Exist", "400");
-			return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+			return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 		}else {
 			if(passwordEncoder.matches(cust.getPassword(), fetchedEmail.getPassword()) == true) {
-				CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Login Successful", "200");
+				CustomerResponseForRegistration loginResponse = new CustomerResponseForRegistration(new Date(), "Login Successful", "200",fetchedEmail);
 				return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
 			}else {
 				CustomerResponseForNoUser loginResponse = new CustomerResponseForNoUser(new Date(), "Invalid Credentials", "400");
@@ -116,7 +121,7 @@ public class CustomerController {
 		
 		if(fetchAccount == null) {
 			CustomResponseForAccountDetails loginResponse = new CustomResponseForAccountDetails(new Date(), "Account Not Found", "400", fetchAccount);
-			return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
+			return new ResponseEntity<Object>(loginResponse, HttpStatus.BAD_REQUEST);
 		}else {
 			CustomResponseForAccountDetails loginResponse = new CustomResponseForAccountDetails(new Date(), "Account Details Fetched Successfully", "200", fetchAccount);
 			return new ResponseEntity<Object>(loginResponse, HttpStatus.OK);
@@ -137,8 +142,8 @@ public class CustomerController {
 			return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
 		} else {
 
-			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Cannot find Customer by this Id","200");
-			return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Cannot find Customer by this Id","400");
+			return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 		}
 		
 	}
@@ -156,7 +161,7 @@ public class CustomerController {
 				
 				if (passwordEncoder.matches(passwordChange.getConfirmPassword(), fetchedEmail.getPassword()) == true) {
 					CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "New Password Should be different from old Password","400");
-					return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+					return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 				}else {
 					
 					customerService.updatePassword(passwordChange.getConfirmPassword(), passwordChange.getEmailId());
@@ -166,11 +171,11 @@ public class CustomerController {
 				
 			}else {
 				CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Confirm Password do not Match","400");
-				return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+				return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 			}
 		}else {
 			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Invalid Email or User Does't Exist","409");
-			return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+			return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 		}
 		
 	}
@@ -179,16 +184,55 @@ public class CustomerController {
 	public ResponseEntity<Object> SendOTP(@RequestBody OtpRequest otpRequest) {
 		
 		CustomerEntity fetchedEmail = customerService.findUserByEmails(otpRequest.getEmailId());
+		
 		if (fetchedEmail != null) {
-			mailService.sendMail(otpRequest.getEmailId(), accountNumberGenerator.TransactionPin());
+			OtpDetails fetchCustomerId = otpDetailsService.findUserByCustomerId(fetchedEmail.getCustomerId());
 			
+			String generatedOtp = accountNumberGenerator.otpGenerator();
+			
+			if (fetchCustomerId != null) {
+				otpDetailsService.updateOtpDetails(generatedOtp,fetchCustomerId.getCustomerId());
+			}else {
+				OtpDetails otpDetails = new OtpDetails();
+				otpDetails.setCustomerId(fetchedEmail);
+				otpDetails.setOtp(generatedOtp);
+				otpDetailsService.newOtpEntry(otpDetails);
+			}
+			mailService.sendMail(otpRequest.getEmailId(), generatedOtp);
 			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "OTP Send to Email","200");
 			return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
 		}else {
-			
 			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Invalid Email or User Does't Exist","409");
-			return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+			return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
 		}
+	}
+	
+	@PostMapping("/verifyOtp")
+	public ResponseEntity<Object> verifyOtp(@RequestBody VerifyOtp verifyOtp){
+		
+		OtpDetails fetchCustomerId = otpDetailsService.findUserByCustomerId(verifyOtp.getCustomerId());
+		
+		
+		if (fetchCustomerId != null) {
+			CustomerEntity fetchTransPin = customerService.findUserById(verifyOtp.getCustomerId());
+			long otp = Long.parseLong(fetchCustomerId.getOtp());
+			long transPin = Long.parseLong(fetchTransPin.getTransPin());
+			long answer = Math.abs(transPin + otp);
+			
+			if (answer == Long.parseLong(verifyOtp.getOtp())) {
+				
+				CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "OTP Verified Successfully","200");
+				return new ResponseEntity<Object>(custResponse, HttpStatus.OK);
+			}else {
+				
+				CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "Invalid OTP","409");
+				return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
+			}
+		} else {
+			CustomerResponseForNoUser custResponse = new CustomerResponseForNoUser(new Date(), "User Doesn't Exist","409");
+			return new ResponseEntity<Object>(custResponse, HttpStatus.BAD_REQUEST);
+		}
+		
 	}
 	
 	@GetMapping("/getAllCustomer")

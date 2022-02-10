@@ -3,6 +3,7 @@ package com.banking.demo.customRequest;
 public class PasswordChange {
 	
 	private String emailId;
+	private String oldPassword;
 	private String newPassword;
 	private String confirmPassword;
 	
@@ -11,9 +12,10 @@ public class PasswordChange {
 		// TODO Auto-generated constructor stub
 	}
 
-	public PasswordChange(String emailId, String newPassword, String confirmPassword) {
+	public PasswordChange(String emailId, String oldPassword, String newPassword, String confirmPassword) {
 		super();
 		this.emailId = emailId;
+		this.oldPassword = oldPassword;
 		this.newPassword = newPassword;
 		this.confirmPassword = confirmPassword;
 	}
@@ -24,6 +26,14 @@ public class PasswordChange {
 
 	public void setEmailId(String emailId) {
 		this.emailId = emailId;
+	}
+
+	public String getOldPassword() {
+		return oldPassword;
+	}
+
+	public void setOldPassword(String oldPassword) {
+		this.oldPassword = oldPassword;
 	}
 
 	public String getNewPassword() {
@@ -44,8 +54,8 @@ public class PasswordChange {
 
 	@Override
 	public String toString() {
-		return "PasswordChange [emailId=" + emailId + ", newPassword=" + newPassword + ", confirmPassword="
-				+ confirmPassword + "]";
+		return "PasswordChange [emailId=" + emailId + ", oldPassword=" + oldPassword + ", newPassword=" + newPassword
+				+ ", confirmPassword=" + confirmPassword + "]";
 	}
 
 }

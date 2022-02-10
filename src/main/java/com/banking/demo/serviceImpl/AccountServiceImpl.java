@@ -1,5 +1,7 @@
 package com.banking.demo.serviceImpl;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +36,12 @@ public class AccountServiceImpl implements AccountService{
 	public MoneyTransfer updateCreditDebit(MoneyTransfer updateCrDb) {
 		// TODO Auto-generated method stub
 		return moneyTransferRepository.save(updateCrDb);
+	}
+
+	@Override
+	public List<MoneyTransfer> fetchTransAccount(String accountNumber) {
+		// TODO Auto-generated method stub
+		return moneyTransferRepository.fetchTransAccount(accountNumber);
 	}
 
 

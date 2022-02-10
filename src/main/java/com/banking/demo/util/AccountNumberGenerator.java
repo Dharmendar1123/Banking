@@ -20,4 +20,12 @@ public class AccountNumberGenerator {
 		return transId;
 	}
 	
+	public String otpGenerator() {
+		Random random = new Random();
+		int otp = 1000 + random.nextInt(999);
+		String[] operator = {"+", "-"};
+		String randomOp = operator[random.nextInt(operator.length)];
+		return randomOp+otp;
+	}
+	
 }
